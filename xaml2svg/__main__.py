@@ -1,3 +1,9 @@
+"""
+python -m xaml2svg
+
+Converts WPF ResourceDictionary DrawingImage icons to SVG files.
+"""
+
 # import uuid
 import os
 import sys
@@ -49,6 +55,9 @@ ELEM_GRADIENT_STOP = f'{{{NS_ROOT}}}GradientStop'
 
 
 def scale(value, value_max, scaled_max):
+    """ Scales a value using the same scale factor required to scale from value_max to scaled_max.
+    The output is clamped between 0 and scaled_max, so negative values are not allowed.
+    """
     if not value or value_max == 0:
         return 0
     factor = value / value_max
@@ -56,10 +65,12 @@ def scale(value, value_max, scaled_max):
 
 
 def svg_root(viewsize: int, name: str) -> ETree.Element:
+    """ Creates the SVG root element. """
     return ETree.Element('svg', viewBox=f'0 0 {viewsize} {viewsize}', xmlns='http://www.w3.org/2000/svg', id=name)
 
 
 def svg_group(parent: ETree.Element, tf_elem: Optional[ETree.Element]):
+    """ Turns a DrawingGroup into an SVG group (g), optionally with a transformation applied to it. """
     transform = []
     if tf_elem is not None:
         tf_elem = tf_elem.find(ELEM_TRANSFORM_GROUP) or tf_elem
@@ -102,6 +113,7 @@ def svg_group(parent: ETree.Element, tf_elem: Optional[ETree.Element]):
 
 
 def process_brush(brush: ETree.Element, defs: ETree.Element) -> str:
+    """ Processes a GeometryDrawing.Brush element to turn it into an SVG fill. """
     result = 'none'
 
     try:
@@ -144,6 +156,7 @@ def process_brush(brush: ETree.Element, defs: ETree.Element) -> str:
 
 
 def svg_path(parent: ETree.Element, path_elem: ETree.Element, defs: ETree.Element):
+    """ Turns a GeometryDrawing into an SVG path, ellipsis, or rect. """
     fill = path_elem.attrib.get(ATTR_BRUSH, path_elem.find(ELEM_GEOMETRY_DRAWING_BRUSH))
     if isinstance(fill, str):
         if fill.lower() == 'transparent':
@@ -192,6 +205,7 @@ def image_size(k: str) -> Optional[int]:
 
 
 def walk(elem_in: ETree.Element, parent_out: ETree.Element, defs: ETree.Element):
+    """ Walks all child elements of the DrawingImage and converts them into their SVG counterpart. """
     if elem_in.tag == ELEM_DRAWING_GROUP:
         transform = elem_in.find(ELEM_DRAWING_GROUP_TRANSFORM)
         parent_group = svg_group(parent_out, transform)
@@ -202,6 +216,7 @@ def walk(elem_in: ETree.Element, parent_out: ETree.Element, defs: ETree.Element)
 
 
 def drawing_to_svg(xaml: ETree.Element, viewsize: int, name: str) -> ETree.Element:
+    """ Turns a DrawingImage into an SVG object. """
     root_out = svg_root(viewsize, name)
     defs = ETree.Element('defs')
     for item in xaml:
@@ -212,6 +227,7 @@ def drawing_to_svg(xaml: ETree.Element, viewsize: int, name: str) -> ETree.Eleme
 
 
 def main(xaml_file: Path, output_dir: Path):
+    """ Reads the XAML file and converts DrawingImage children to SVG files. """
 
     with open(xaml_file) as fp:
         tree = ETree.parse(fp)
