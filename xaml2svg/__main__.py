@@ -207,7 +207,6 @@ def image_size(k: str) -> Optional[int]:
             num = str(s)
             if k.endswith(num):
                 return s
-    print(f"Skipping unexpected image key: {k}")
     return None
 
 
@@ -249,11 +248,20 @@ def main(xaml_file: Path, output_dir: Path):
         if not key:
             print(f"Skipping element without name: {img}")
             continue
-        size = image_size(key)
 
-        drawing = img.find(ELEM_DRAWING_IMAGE_DRAWING)
-        if not drawing:
+        # Extract size from key
+        size = image_size(key)
+        if size is None:
+            print(f"Skipping element without valid size in Key attribute: {key}")
             continue
+
+        # Get drawing
+        drawing = img.find(ELEM_DRAWING_IMAGE_DRAWING)
+        if drawing is None:
+            print(f"Skipping element without Drawing content: {key}")
+            continue
+
+        # Convert drawing to SVG and write file
         svg_out = drawing_to_svg(drawing, size, key)
         tree_out = ETree.ElementTree(svg_out)
         ETree.indent(tree_out)
