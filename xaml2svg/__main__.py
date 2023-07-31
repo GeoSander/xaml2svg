@@ -112,6 +112,13 @@ def svg_group(parent: ETree.Element, tf_elem: Optional[ETree.Element]):
 #     # spread = brush.attrib.get(ATTR_SPREAD_METHOD)  TODO (defaults to 'pad')
 
 
+def argb_to_rgba(color: str):
+    """ Converts WPF ARGB colors to SVG RGBA. Leaves non-hexadecimal color types unchanged. """
+    if not color.startswith('#'):
+        return color
+    return f'#{color[3:]}{color[1:3]}'
+
+
 def process_brush(brush: ETree.Element, defs: ETree.Element) -> str:
     """ Processes a GeometryDrawing.Brush element to turn it into an SVG fill. """
     result = 'none'
@@ -131,13 +138,12 @@ def process_brush(brush: ETree.Element, defs: ETree.Element) -> str:
             return result
         opacity = brush.attrib.get(ATTR_OPACITY)
         if opacity:
-            # Adjust color to become ARGB
-            color = color.removeprefix('#')
+            # Adjust color to become RGBa
             opacity = hex(int(scale(float(opacity), 1, 255))).upper().removeprefix('0X')
-            if len(color) == 8:
-                result = opacity + color[2:]
-            elif len(color) == 6:
-                result = opacity + color
+            if len(color) == 9:
+                result = f'#{color[3:]}{opacity}'
+            elif len(color) == 7:
+                result = color + opacity
 
     else:
         print('Gradient brushes are not supported yet: setting color to "red"')
@@ -159,6 +165,7 @@ def svg_path(parent: ETree.Element, path_elem: ETree.Element, defs: ETree.Elemen
     """ Turns a GeometryDrawing into an SVG path, ellipsis, or rect. """
     fill = path_elem.attrib.get(ATTR_BRUSH, path_elem.find(ELEM_GEOMETRY_DRAWING_BRUSH))
     if isinstance(fill, str):
+        fill = argb_to_rgba(fill)
         if fill.lower() == 'transparent':
             fill = 'none'
     else:
